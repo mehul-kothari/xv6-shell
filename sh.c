@@ -60,22 +60,27 @@ runcmd(struct cmd *cmd)
     exit(-1);
 
   case ' ':
+	  printf("hi");
     ecmd = (struct execcmd*)cmd;
          // printf("---%s",(ecmd->argv[3]));
           //printf("---%d",strlen((ecmd->argv)));
     if(ecmd->argv[0] == 0)
       exit(0);
+   /* char *path;
     //fprintf(stderr, "exec not implemented\n");
-   char *path = (char *) malloc(1 + strlen("/bin/")+ strlen(ecmd->argv[0]) );
+    if(strcmp(ecmd->argv[0],"sort") == 0)
+    	path = (char *) malloc(1 + strlen("usr/bin/")+ strlen(ecmd->argv[0]) );
+    else
+    	path = (char *) malloc(1 + strlen("/bin/")+ strlen(ecmd->argv[0]) );
    strcpy(path, "/bin/");
-   strcat(path, ecmd->argv[0]);
+   strcat(path, ecmd->argv[0]);*/
 
-          //printf("%s\n",path);
+        //  printf("%s\n",path);
          // printf("%s",(char *)ecmd->argv[0]);
         //  char *toCall=ecmd->argv;
          // ecmd->argv[2]='\0';
          // emcd->argv[strlen(emcd)]
-          execv(path ,ecmd->argv);
+          execvp(ecmd->argv[0] ,ecmd->argv);
     // Your code here ...
     break;
 
@@ -86,7 +91,7 @@ runcmd(struct cmd *cmd)
                   // int buf[512];
                    write_fd=open(rcmd->file,O_WRONLY|O_CREAT|O_TRUNC,0777);
                    dup2(write_fd,1);
-                  // close(0);
+                  //close(0);
              //fprintf(stderr, "redir not implemented\n");
 
              // Your code here ...
@@ -99,23 +104,54 @@ runcmd(struct cmd *cmd)
           int buf[512];
           read_fd=open(rcmd->file,O_RDONLY,0777);
           dup2(read_fd,0);
+
          // close(0);
     //fprintf(stderr, "redir not implemented\n");
 
     // Your code here ...
-    runcmd(rcmd->cmd);
+    runcmd(rcmd->cmd);//reason
     break;
 
   case '|':
     pcmd = (struct pipecmd*)cmd;
-    printf("inside pipe");
-   printf("%d",pcmd->left->type);
-    //int pipe1[2];
-    //pipe(pipe1);
-   // dup2(pipe1[1],1);
-   // close(pipe1[1]);
-  //  fprintf(stderr, "pipe not implemented\n");
-    // Your code here ...
+   // printf("hey");
+    pipe(p);
+
+if(fork()==0)
+{
+	close(1);
+	dup(p[1]);
+	close(p[0]);
+	close(p[1]);
+	runcmd(pcmd->left);
+	//close(0);
+	/*dup2(p[1],1);
+	close(p[0]);
+	close(p[1]);
+	//close(0);
+	runcmd(pcmd->left);*/
+	//close(1); dup(p[1]); close(p[0]); close(p[1]); runcmd(pcmd−>left);
+}
+else
+{
+
+	//wc
+	//close(1);
+
+	close(0);
+	dup(p[0]);
+	close(p[0]);
+	close(p[1]);
+	runcmd(pcmd->right);
+}
+
+close(p[0]);
+close(p[1]);
+wait(NULL);
+wait(NULL);
+//close(0);
+
+
     break;
   }
   exit(0);
@@ -151,11 +187,24 @@ main(void)
         fprintf(stderr, "cannot cd %s\n", buf+3);
       continue;
     }
-   // printf("hello1");
-    if(fork1() == 0)
+    const char delimiters[] = ";";
+            char *token, *cp;
+
+           cp = strdup(buf);
+            while( (token = strsep(&cp,";")) != NULL )
+            {
+                printf("%s\n",token);
+                if(fork1() == 0)
+                    runcmd(parsecmd(token));
+                wait(&r);
+            }
+        }
+
+  // printf("%c",*buf);
+  /*  if(fork1() == 0)
       runcmd(parsecmd(buf));
-    wait(&r);
-  }
+    wait(&r);*/
+  //}
   exit(0);
 }
 
@@ -240,7 +289,7 @@ gettoken(char **ps, char *es, char **q, char **eq)
     break;
   default:
     ret = 'a';
-    while(s < es && !strchr(whitespace, *s) && !strchr(symbols, *s))
+    while(s < es && !strchr(whitespace, *s) && !strchr(symbols, *s)) //increment the pointer till"echo finishes"
       s++;
     break;
   }
@@ -249,7 +298,7 @@ gettoken(char **ps, char *es, char **q, char **eq)
 
   while(s < es && strchr(whitespace, *s))
     s++;
-  *ps = s;
+  *ps = s;//finally s is pointing to "hey"
   return ret;
 }
 // this function looks for blank spaces and moves ahead. And check whteher the toks vlaue passed is equal to the first char
@@ -259,10 +308,11 @@ peek(char **ps, char *es, char *toks)
   char *s;
 // ps=double pointer to the command passed for 'ls'
   //es= length of ls just to check pointer dosent go beyond es=s+len(s)
-  s = *ps;
+  s = *ps; //contains the input
   while(s < es && strchr(whitespace, *s)) // seeing whether the first char is blank space or not. Trying to skip blank spaces.
     s++;
-  *ps = s;// assign value after jumping the blank spaces
+  *ps = s;
+  //printf("inside peek%c",*s);// assign value after jumping the blank spaces
   //*ps points to the first char after blank spaces.
   return *s && strchr(toks, *s); // ######3not excatly understood how it works###########3
   //strchr checks fpor the occurence of char in toks="<>"
@@ -288,12 +338,12 @@ char
 }
 
 struct cmd*
-parsecmd(char *s)
+parsecmd(char *s) //s= echo "hey" > l.txt
 {
   char *es;
   struct cmd *cmd;
 
-  es = s + strlen(s);
+  es = s + strlen(s); //  es pointing to end of string
  // printf("hey");
   cmd = parseline(&s, es);
   peek(&s, es, "");
@@ -358,7 +408,7 @@ parseexec(char **ps, char *es)
   struct execcmd *cmd;
   struct cmd *ret;
 
-  ret = execcmd();
+  ret = execcmd(); // for exec
   cmd = (struct execcmd*)ret;
 
   argc = 0;

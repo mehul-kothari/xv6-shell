@@ -4,12 +4,15 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../sh-extra.c \
 ../sh.c 
 
 OBJS += \
+./sh-extra.o \
 ./sh.o 
 
 C_DEPS += \
+./sh-extra.d \
 ./sh.d 
 
 
